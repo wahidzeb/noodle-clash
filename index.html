@@ -965,13 +965,27 @@ function renderInit() {
   RD.cv = $('game'); RD.ctx = RD.cv.getContext('2d', { alpha: false });
   for (var i = 0; i < ORB_COLS.length; i++) { RD.orbC.push(makeOrbSprite(ORB_COLS[i], true)); RD.orbCoreC.push(makeOrbSprite(ORB_COLS[i], false)); }
   RD.sparkC = makeGlow('#ffffff');
-  var tile = document.createElement('canvas'), hr = 46, tw = Math.round(Math.sqrt(3) * hr), th = hr * 3;
-  tile.width = tw; tile.height = th; var g = tile.getContext('2d');
-  g.fillStyle = '#100c2c'; g.fillRect(0, 0, tw, th);
-  g.strokeStyle = 'rgba(120,100,255,.13)'; g.lineWidth = 2.5;
-  function hex(cx, cy) { g.beginPath(); for (var k = 0; k < 6; k++) { var a = Math.PI / 6 + k * Math.PI / 3, x = cx + Math.cos(a) * (hr - 3), y = cy + Math.sin(a) * (hr - 3); k ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); g.fillStyle = 'rgba(40,30,100,.35)'; g.fill(); g.stroke(); }
-  hex(tw / 2, hr * 0); hex(0, hr * 1.5); hex(tw, hr * 1.5); hex(tw / 2, hr * 3);
+  // hex floor tile: transparent so the parallax nebula/stars show through; bevelled cells with tint variation
+  var tile = document.createElement('canvas'), hr = 34, tw = Math.round(Math.sqrt(3) * hr), th = hr * 3, TX = 3, TY = 2;
+  tile.width = tw * TX; tile.height = th * TY; var g = tile.getContext('2d'), rr = 1;
+  function rn() { rr = (rr * 16807) % 2147483647; return rr / 2147483647; }
+  function hexP(cx, cy, k) { g.beginPath(); for (var q = 0; q < 6; q++) { var a = Math.PI / 6 + q * Math.PI / 3, x = cx + Math.cos(a) * (hr - k), y = cy + Math.sin(a) * (hr - k); q ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); }
+  function hex(cx, cy) {
+    var v = rn(), gr = g.createLinearGradient(cx, cy - hr, cx, cy + hr);
+    gr.addColorStop(0, 'rgba(' + (60 + v * 30 | 0) + ',' + (44 + v * 20 | 0) + ',150,.42)'); gr.addColorStop(1, 'rgba(24,16,70,.38)');
+    hexP(cx, cy, 3); g.fillStyle = gr; g.fill();
+    g.lineWidth = 2.5; g.strokeStyle = 'rgba(140,120,255,.16)'; g.stroke();
+    hexP(cx, cy, 7); g.lineWidth = 1.2; g.strokeStyle = 'rgba(255,255,255,.05)'; g.stroke();
+    if (v > 0.9) { hexP(cx, cy, 12); g.fillStyle = 'rgba(61,245,196,.05)'; g.fill(); }
+    if (v < 0.07) { hexP(cx, cy, 12); g.fillStyle = 'rgba(255,79,163,.06)'; g.fill(); }
+  }
+  for (var iy = 0; iy <= TY; iy++) for (var ix = 0; ix <= TX; ix++) { var bx = ix * tw, by = iy * th; hex(bx + tw / 2, by); hex(bx, by + hr * 1.5); }
   RD.bgTile = tile; RD.bgPat = RD.ctx.createPattern(tile, 'repeat');
+  // tileable star field for the deep-space parallax layer
+  var st = document.createElement('canvas'); st.width = st.height = 512; g = st.getContext('2d');
+  for (var i2 = 0; i2 < 140; i2++) { var x = rn() * 512, y = rn() * 512, z = rn(); g.globalAlpha = 0.25 + z * 0.6; g.fillStyle = z > 0.85 ? '#bfe9ff' : z > 0.7 ? '#ffd6f0' : '#ffffff'; g.beginPath(); g.arc(x, y, 0.5 + z * 1.3, 0, TAU); g.fill(); }
+  g.globalAlpha = 1; RD.starPat = RD.ctx.createPattern(st, 'repeat');
+  RD.shadowC = (function () { var c = document.createElement('canvas'); c.width = c.height = 64; var q = c.getContext('2d'), gr = q.createRadialGradient(32, 32, 8, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); q.fillStyle = gr; q.fillRect(0, 0, 64, 64); return c; })();
   resize();
 }
 function resize() {
@@ -1000,6 +1014,9 @@ function getSeg(col, deco, dcol) {
   var gr = g.createRadialGradient(24, 21, 2, 32, 32, 30);
   gr.addColorStop(0, shade(col, 0.55)); gr.addColorStop(0.35, col); gr.addColorStop(0.85, shade(col, -0.32)); gr.addColorStop(1, shade(col, -0.55));
   g.beginPath(); g.arc(32, 32, 29, 0, TAU); g.fillStyle = gr; g.fill();
+  g.beginPath(); g.arc(32, 32, 28.5, 0, TAU); g.lineWidth = 2; g.strokeStyle = shade(col, -0.6); g.stroke();
+  g.beginPath(); g.arc(32, 32, 25, Math.PI * 0.15, Math.PI * 0.85); g.lineWidth = 2.5; g.strokeStyle = hexA(shade(col, 0.5), 0.35); g.stroke();
+  g.beginPath(); g.ellipse(24, 20, 9, 5.5, -0.6, 0, TAU); g.fillStyle = 'rgba(255,255,255,.38)'; g.fill();
   if (deco === 'dot') { g.beginPath(); g.arc(32, 32, 10, 0, TAU); g.fillStyle = dcol; g.fill(); g.beginPath(); g.arc(29, 29, 3.5, 0, TAU); g.fillStyle = 'rgba(255,255,255,.6)'; g.fill(); }
   else if (deco === 'spine') { var gg = g.createRadialGradient(32, 32, 0, 32, 32, 12); gg.addColorStop(0, '#fff'); gg.addColorStop(0.4, dcol); gg.addColorStop(1, hexA(dcol, 0)); g.fillStyle = gg; g.fillRect(16, 16, 32, 32); }
   RD.segC[key] = c; return c;
@@ -1023,7 +1040,7 @@ function skinSprites(skin) {
 function Cam() { this.x = 0; this.y = 0; this.s = 0.5; this.shake = 0; }
 Cam.prototype.follow = function (s, vw, vh, dt, snap) {
   var base = Math.sqrt(vw * vh) / 820, ts = base / (1 + (s.r - 11) / 34) * (s.boost ? 0.95 : 1);
-  if (vw < vh) ts *= 1.05;
+  if (vw < vh) ts *= 1.5; else ts *= 1.2;
   var k = snap ? 1 : Math.min(1, dt * 6);
   this.x += (s.x - this.x) * k; this.y += (s.y - this.y) * k; this.s += (ts - this.s) * (snap ? 1 : Math.min(1, dt * 1.5));
 };
@@ -1034,17 +1051,26 @@ function drawView(W, cam, vx, vy, vw, vh, opt) {
   ctx.save();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.beginPath(); ctx.rect(vx, vy, vw, vh); ctx.clip();
+  // deep-space backdrop (screen space): gradient, nebula glow, parallax stars
+  var bgk = vw + 'x' + vh;
+  if (!RD.bgC || RD.bgK !== bgk) { RD.bgK = bgk; var bc = RD.bgC = document.createElement('canvas'); bc.width = Math.max(2, vw); bc.height = Math.max(2, vh); var bg = bc.getContext('2d');
+    var gr0 = bg.createLinearGradient(0, 0, 0, vh); gr0.addColorStop(0, '#1a0f45'); gr0.addColorStop(0.55, '#0d0a2a'); gr0.addColorStop(1, '#070616'); bg.fillStyle = gr0; bg.fillRect(0, 0, vw, vh);
+    [[0.2, 0.25, '#7b3cff'], [0.85, 0.6, '#ff3fa4'], [0.4, 0.9, '#1fb5ff']].forEach(function (n) { var gg = bg.createRadialGradient(vw * n[0], vh * n[1], 0, vw * n[0], vh * n[1], Math.max(vw, vh) * 0.55); gg.addColorStop(0, hexA(n[2], 0.22)); gg.addColorStop(1, hexA(n[2], 0)); bg.fillStyle = gg; bg.fillRect(0, 0, vw, vh); }); }
+  ctx.drawImage(RD.bgC, vx, vy, vw, vh);
+  ctx.save(); var pxo = -cam.x * cam.s * 0.25, pyo = -cam.y * cam.s * 0.25; ctx.translate(vx + (pxo % 512), vy + (pyo % 512)); ctx.fillStyle = RD.starPat; ctx.fillRect(-512, -512, vw + 1024, vh + 1024); ctx.restore();
   var ox = vx + vw / 2 + shx, oy = vy + vh / 2 + shy;
   ctx.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * (ox - cam.x * sc), dpr * (oy - cam.y * sc));
   var x0 = cam.x - vw / 2 / sc - 40, x1 = cam.x + vw / 2 / sc + 40, y0 = cam.y - vh / 2 / sc - 40, y1 = cam.y + vh / 2 / sc + 40;
   // background
-  ctx.fillStyle = RD.bgPat; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  ctx.fillStyle = RD.bgPat; ctx.beginPath(); ctx.arc(0, 0, W.R, 0, TAU); ctx.fill();
   // outside arena
   var R = W.R;
   ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.arc(0, 0, R, 0, TAU, true); ctx.fillStyle = 'rgba(70,0,20,.72)'; ctx.fill();
   ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU);
-  ctx.strokeStyle = 'rgba(255,60,90,.25)'; ctx.lineWidth = 34; ctx.stroke();
-  ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 8; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,60,90,.14)'; ctx.lineWidth = 70; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,60,90,.28)'; ctx.lineWidth = 30; ctx.stroke();
+  ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 9; ctx.stroke();
+  ctx.setLineDash([60, 50]); ctx.lineDashOffset = -t * 120; ctx.strokeStyle = '#ffd1dc'; ctx.lineWidth = 3; ctx.stroke(); ctx.setLineDash([]);
   if (W.mode === 'br' && W.zoneR < R) {
     var zr = Math.max(0, W.zoneR);
     ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.arc(0, 0, zr, 0, TAU, true); ctx.fillStyle = 'rgba(160,30,200,.22)'; ctx.fill();
@@ -1091,6 +1117,9 @@ function drawSnake(ctx, s, x0, y0, x1, y1, t, sc, low, opt, isLeader) {
     for (k = n - 1; k >= 0; k -= 2) { var gx = px[k], gy = py[k]; if (gx < x0 - m || gx > x1 + m || gy < y0 - m || gy > y1 + m) continue; ctx.drawImage(sp.glow, gx - gz / 2, gy - gz / 2, gz, gz); }
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = blink ? 0.45 : 1;
   }
+  if (!low) { var so = r * 0.45, sz2 = r * 2.9; ctx.globalAlpha = blink ? 0.25 : 0.6;
+    for (k = n - 1; k >= 0; k -= 2) { var qx = px[k] + so, qy = py[k] + so; if (qx < x0 - m || qx > x1 + m || qy < y0 - m || qy > y1 + m) continue; ctx.drawImage(RD.shadowC, qx - sz2 / 2, qy - sz2 / 2, sz2, sz2); }
+    ctx.globalAlpha = blink ? 0.45 : 1; }
   var pulse = sp.pulse, ph = t * 9;
   for (k = n - 1; k >= 1; k--) {
     var x = px[k], y = py[k]; if (x < x0 - m || x > x1 + m || y < y0 - m || y > y1 + m) continue;
