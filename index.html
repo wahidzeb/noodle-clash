@@ -149,7 +149,7 @@ h2{margin:0;font-size:26px;font-weight:900;text-transform:uppercase;letter-spaci
 #lb div.r.me{color:var(--mint)}
 #lb div.r.p2{color:var(--yolk)}
 #mini{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 10px);right:calc(env(safe-area-inset-right) + 10px);width:104px;height:104px;border-radius:50%;pointer-events:none}
-.boost{bottom:calc(env(safe-area-inset-bottom) + 126px);right:calc(env(safe-area-inset-right) + 18px);width:84px;height:84px;border-radius:50%;border:3px solid rgba(11,8,32,.9);
+.boost{bottom:calc(env(safe-area-inset-bottom) + 146px);right:calc(env(safe-area-inset-right) + 18px);width:84px;height:84px;border-radius:50%;border:3px solid rgba(11,8,32,.9);
  background:radial-gradient(circle at 40% 35%,rgba(255,240,150,.95),rgba(255,138,61,.85) 60%,rgba(200,60,30,.85));box-shadow:0 0 0 4px rgba(255,210,63,.25),0 5px 0 rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;color:var(--ink)}
 .boost.on{transform:scale(.92);box-shadow:0 0 0 10px rgba(255,210,63,.35),0 0 30px rgba(255,180,60,.9)}
 body.lefty #mini{right:auto;left:calc(env(safe-area-inset-left) + 10px)}
@@ -1166,9 +1166,12 @@ function drawSnake(ctx, s, x0, y0, x1, y1, t, sc, low, opt, isLeader) {
     if (isLeader) drawCrown(ctx, hx, hy - r * 1.9, r * 0.9);
     if (opt.names && (s.pl >= 0 || !low)) {
       var fs = 13 / sc; ctx.font = '800 ' + fs + 'px system-ui,sans-serif'; ctx.textAlign = 'center';
-      ctx.lineWidth = 3.5 / sc; ctx.strokeStyle = 'rgba(8,6,22,.85)'; var ny = hy - r * (isLeader ? 2.6 : 1.6) - 6 / sc;
+      var ny = hy - r * (isLeader ? 2.6 : 1.6) - 6 / sc;
       var label = s.pl >= 0 ? s.name : (opt.pers ? PERS[s.pers === 'player' ? 'grazer' : s.pers].ic + ' ' : '') + s.name;
+      if (s.pl >= 0) { ctx.shadowColor = 'rgba(0,0,0,.95)'; ctx.shadowBlur = 7 / sc; ctx.shadowOffsetY = 1.5 / sc; ctx.lineWidth = 5.5 / sc; ctx.strokeStyle = 'rgba(8,6,22,.98)'; }
+      else { ctx.lineWidth = 3.5 / sc; ctx.strokeStyle = 'rgba(8,6,22,.85)'; }
       ctx.strokeText(label, hx, ny); ctx.fillStyle = s.pl === 0 ? '#3df5c4' : s.pl === 1 ? '#ffd23f' : 'rgba(255,243,220,.85)'; ctx.fillText(label, hx, ny);
+      if (s.pl >= 0) { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
     }
   }
   ctx.globalAlpha = 1;
@@ -1220,9 +1223,12 @@ function drawFace(ctx, s, hx, hy, r, t, low) {
   ctx.beginPath(); ctx.arc(mx - ca * r * 0.25, my - sa * r * 0.25, r * 0.32, s.a - 0.9, s.a + 0.9); ctx.lineWidth = r * 0.1; ctx.strokeStyle = 'rgba(20,10,40,.8)'; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
   for (var e = -1; e <= 1; e += 2) {
     var ex = hx + ca * r * 0.22 - sa * r * 0.46 * e, ey = hy + sa * r * 0.22 + ca * r * 0.46 * e, er = r * 0.46;
+    var me = s.pl >= 0;
     ctx.save(); ctx.translate(ex, ey); ctx.rotate(s.a); ctx.scale(1, bl);
-    ctx.beginPath(); ctx.arc(0, 0, er * 1.12, 0, TAU); ctx.fillStyle = 'rgba(15,8,35,.85)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, er * (me ? 1.22 : 1.12), 0, TAU); ctx.fillStyle = me ? 'rgba(8,4,20,.96)' : 'rgba(15,8,35,.85)'; ctx.fill();
+    if (me) { ctx.lineWidth = er * 0.22; ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.stroke(); }
     ctx.beginPath(); ctx.arc(0, 0, er, 0, TAU); ctx.fillStyle = '#fff'; ctx.fill();
+    if (me) { ctx.lineWidth = er * 0.14; ctx.strokeStyle = 'rgba(12,6,30,.95)'; ctx.stroke(); }
     ctx.restore();
     if (bl < 1) continue;
     var pxo = (lc * ca + ls * sa) * er * 0.38, pyo = (ls * ca - lc * sa) * er * 0.38; // look dir in head frame
@@ -1499,8 +1505,8 @@ function finish() {
 }
 function misGoal(m) { return (m.id === 'rushtop' || m.id === 'brtop' || m.id === 'duo') ? 1 : m.g; }
 function misText(m) { var d = null; MISSION_POOL.forEach(function (x) { if (x.id === m.id) d = x; }); return d.t.replace('{g}', m.g); }
-function pauseGame() { if (G.state !== 'play') return; G.state = 'pause'; ztPlay(false); show('scrPause'); IN.bbtn = [false, false]; }
-function resumeGame() { if (G.state !== 'pause') return; if (G.duo && isPortrait()) { show('rotate'); return; } SCREENS.forEach(function (s) { $(s).classList.add('hidden'); }); G.state = 'play'; ztPlay(true); auInit(); G.last = performance.now(); }
+function pauseGame() { if (G.state !== 'play') return; G.state = 'pause'; ztPlay(false); $('bigMsg').classList.add('hidden'); clearTimeout(G.bigT); $('tutBox').classList.add('hidden'); show('scrPause'); IN.bbtn = [false, false]; }
+function resumeGame() { if (G.state !== 'pause') return; if (G.duo && isPortrait()) { show('rotate'); return; } SCREENS.forEach(function (s) { $(s).classList.add('hidden'); }); G.state = 'play'; if (G.tut) $('tutBox').classList.remove('hidden'); ztPlay(true); auInit(); G.last = performance.now(); }
 function quitToMenu() { if (G.W && G.state !== 'results') ztPing('quit'); G.W = null; G.state = 'menu'; $('hud').classList.add('hidden'); document.body.classList.remove('duo'); IN.joy = [null, null]; showTitle(); }
 function showTitle() { $('tBest').textContent = S.best.classic; updateBadges(); show('scrTitle'); }
 function updateBadges() {
