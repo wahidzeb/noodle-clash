@@ -2,7 +2,7 @@
   "id": "/noodle-clash/",
   "name": "Noodle Clash",
   "short_name": "Noodle Clash",
-  "description": "Noodle Clash by Zaib: a free snake battle arena game. Eat glowing orbs, boost, and make AI snakes crash into you. Classic, 3-minute Rush, Battle Royale and 2-player split screen. Plays offline in your browser.",
+  "description": "Noodle Clash by Zaib: a free snake battle arena game. Eat glowing orbs, boost, and make rival snakes crash into you. Classic, 3-minute Rush, Battle Royale and 2-player split screen. Plays offline in your browser.",
   "lang": "en",
   "start_url": "/noodle-clash/?source=pwa",
   "scope": "/noodle-clash/",
